@@ -1,0 +1,124 @@
+title Diagrama 1 - Iniciar partida y armar el equipo
+
+actor Jugador
+participant "juego:Juego" as juego
+participant "vista:VistaConsola" as vista
+participant "gestor:GestorDeEquipo" as gestor
+participant "equipo:Equipo" as equipo
+participant "partida:Partida" as partida
+participant "nivel:Nivel" as nivel
+participant "fabrica:FabricaDeEnemigos" as fabrica
+participant "curva:CurvaDeDificultad" as curva
+participant "rng:GeneradorAleatorio" as rng
+participant "oleada:Oleada" as oleada
+participant "batalla:Batalla" as batalla
+participant "registro:RegistroDeCombate" as registro
+
+Jugador->juego:iniciar()
+activate juego
+juego->juego:mostrarMenuPrincipal()
+note right of juego:el jugador elige "Jugar"
+juego->juego:jugarPartida()
+activate juego
+
+juego->gestor:personajesDisponibles()
+activate gestor
+gestor-->juego:disponibles
+deactivate gestor
+
+juego->vista:elegirPersonajes(disponibles)
+activate vista
+vista->Jugador:muestra los personajes
+Jugador-->vista:elige hasta 4
+vista-->juego:elegidos
+deactivate vista
+
+juego->gestor:crearEquipo(elegidos)
+activate gestor
+gestor->*equipo:<<create>>
+gestor-->juego:equipo
+deactivate gestor
+
+juego->partida:comenzar(equipo)
+activate partida
+partida->partida:nivelActual = primer nivel
+deactivate partida
+
+juego->partida:siguienteBatalla()
+activate partida
+partida->nivel:getNumero()
+activate nivel
+nivel-->partida:1
+deactivate nivel
+
+partida->fabrica:crearOleada(1)
+activate fabrica
+fabrica->curva:cantidadEnemigos(1)
+activate curva
+curva-->fabrica:n
+deactivate curva
+
+loop n veces
+fabrica->fabrica:crearEnemigo(1)
+activate fabrica
+fabrica->curva:rangoVida(1)
+activate curva
+curva-->fabrica:rango
+deactivate curva
+fabrica->rng:enRango(rango)
+activate rng
+rng-->fabrica:vida
+deactivate rng
+fabrica->curva:probabilidadDeInfeccioso(1)
+activate curva
+curva-->fabrica:pInfeccioso
+deactivate curva
+fabrica->rng:probabilidad(pInfeccioso)
+activate rng
+rng-->fabrica:esInfeccioso
+deactivate rng
+fabrica->curva:probabilidadDeTanque(1)
+activate curva
+curva-->fabrica:pTanque
+deactivate curva
+fabrica->rng:probabilidad(pTanque)
+activate rng
+rng-->fabrica:esTanque
+deactivate rng
+alt esInfeccioso == true
+fabrica->fabrica:new ZombieInfeccioso(vida)
+else esTanque == true
+fabrica->fabrica:new ZombieTanque(vida)
+else ninguno de los dos
+fabrica->fabrica:new ZombieComun(vida)
+end
+deactivate fabrica
+end
+
+fabrica->*oleada:<<create>>(enemigos)
+fabrica-->partida:oleada
+deactivate fabrica
+
+partida->oleada:getEnemigos()
+activate oleada
+oleada-->partida:enemigos
+deactivate oleada
+
+partida->*batalla:<<create>>(equipo, enemigos)
+activate batalla
+batalla->*registro:<<create>>
+note right of batalla:también crea su OrquestadorDeTurnos,\nque ordena las unidades por velocidad
+deactivate batalla
+partida-->juego:batalla
+deactivate partida
+
+juego->batalla:getRegistro()
+activate batalla
+batalla-->juego:registro
+deactivate batalla
+juego->registro:suscribir(vista)
+
+juego->juego:jugarBatalla(batalla)
+note right of juego:continúa en el Diagrama 2
+deactivate juego
+deactivate juego

@@ -1,0 +1,96 @@
+title Diagrama 2 - Turno de combate: un Combatiente ataca a un zombie
+
+actor Jugador
+participant "juego:Juego" as juego
+participant "vista:VistaConsola" as vista
+participant "batalla:Batalla" as batalla
+participant "orq:OrquestadorDeTurnos" as orq
+participant "accion:AtacarAccion" as accion
+participant "heroe:Combatiente" as heroe
+participant "zombie:ZombieComun" as zombie
+participant "registro:RegistroDeCombate" as registro
+participant "evento:EventoCombate" as evento
+
+[->juego:jugarBatalla(batalla)
+activate juego
+
+loop mientras !batalla.finalizada()
+juego->vista:mostrarEstadoBatalla(batalla)
+activate vista
+vista->Jugador:muestra la vida de todos
+deactivate vista
+
+juego->batalla:unidadEnTurno()
+activate batalla
+batalla->orq:unidadActual()
+activate orq
+orq-->batalla:heroe
+deactivate orq
+batalla-->juego:heroe
+deactivate batalla
+
+juego->juego:obtenerAccion(heroe, batalla)
+activate juego
+alt la unidad es un Personaje
+juego->vista:pedirAccion(heroe, batalla)
+activate vista
+vista->Jugador:¿qué hace el héroe?
+Jugador-->vista:atacar al zombie
+vista->*accion:<<create>>
+vista-->juego:accion
+deactivate vista
+else la unidad es un Enemigo
+note right of juego:enemigo.elegirAccion(batalla)\n(no ocurre en este escenario)
+end
+deactivate juego
+
+juego->batalla:ejecutarTurno(accion)
+activate batalla
+batalla->orq:ejecutarTurno(heroe, accion, batalla)
+activate orq
+orq->accion:ejecutar(heroe, zombie, batalla)
+activate accion
+accion->heroe:atacar(zombie)
+activate heroe
+
+heroe->zombie:recibirDano(dano)
+activate zombie
+deactivate zombie
+deactivate heroe
+
+accion->batalla:getRegistro()
+activate batalla
+batalla-->accion:registro
+deactivate batalla
+accion->*evento:<<create>>(ATAQUE, heroe, zombie, dano)
+accion->registro:registrar(evento)
+activate registro
+loop por cada observador suscripto
+registro->vista:alOcurrir(evento)
+activate vista
+vista->Jugador:"el héroe hizo 12 de daño"
+deactivate vista
+end
+deactivate registro
+
+accion->zombie:estaVivo()
+activate zombie
+zombie-->accion:vivo
+deactivate zombie
+opt el zombie murió
+accion->registro:registrar(evento MUERTE)
+end
+deactivate accion
+
+orq->orq:aplicarEfectosDeTurno(batalla)
+orq->orq:avanzar()
+deactivate orq
+deactivate batalla
+end
+
+juego->batalla:getResultado()
+activate batalla
+batalla-->juego:resultado
+deactivate batalla
+juego->vista:mostrarResultado(resultado)
+deactivate juego
